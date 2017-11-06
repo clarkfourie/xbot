@@ -1,0 +1,38 @@
+[
+  {
+    "joke": [
+	    {
+	      "index": 0,
+	      "response": "A man came by asking for a donation for the communitty pool. I gave him a glass of water."
+	    },
+	    {
+	      "index": 1,
+	      "response": "What kind of doctor fixes broken websites? A URLologist."
+	    }
+    ],
+    "identification": [
+	    {
+	      "index": 0,
+	      "response": "I am a robot :| 'nuff said..."
+	    },
+	    {
+	      "index": 1,
+	      "response": "A better question is what can I become..."
+	    }
+    ],
+    "greeting": [ 
+	    {
+	      "index": 0,
+	      "response": "Howdy partner"
+	    },
+	    {
+	      "index": 1,
+	      "response": "Hi there :)"
+	    }
+	    {
+	      "index": 2,
+	      "response": "Good day colleague"
+	    },
+	]
+  }
+]
