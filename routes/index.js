@@ -12,7 +12,8 @@ var router = express.Router();
 var wit_token = "UW24HYCHY6YHI7RAIVF3X4NGJSNQTGHG";
 
 // Endpoints
-var google_news_endpoint = "https://news.google.com/news?output=rss";
+var google_news_local = "https://news.google.com/news/rss/local?ned=en_za&hl=en&gl=US";
+var google_news_global = "https://news.google.com/news/rss/?gl=US&ned=us&hl=en";
 var wit_endpoint = "https://api.wit.ai/message?v=28/10/2017&q=";
 
 // Chron job scheduler 
@@ -127,8 +128,8 @@ function getNumCPY(senderID) {
 }  
 
 /* GET Google news article */
-function getArticles(callback) {
-  rssReader(google_news_endpoint, function(err, articles) {
+function getArticles(filter, callback) {
+  rssReader(filter, function(err, articles) {
     if (err) {
       callback(err)
     } else {
@@ -180,8 +181,34 @@ function sendArticle(sender, article) {
 	});  
 }
 
+/* GET Wit.AI intent original */
+// function callWitAI(query, callback) {
+// 	query = encodeURIComponent(query);
+// 	request ({
+// 		uri: wit_endpoint + query,
+// 		qs: { access_token: wit_token },
+// 		method: 'GET'
+// 	}, function (error, response, body) {
+// 		if (!error && response.statusCode == 200) {
+// 			console.log("Successfully got %s", response.body);
+// 			try {
+// 				body = JSON.parse(response.body);
+// 				intent = body.entities.intent[0].value; // [0] (first value) is the most confident value
+// 				callback(null, intent);
+// 			} catch (e) {
+// 				callback(e);
+// 			}
+// 		} else {
+// 			console.log(response.statusCode);
+// 			console.error("Unable to send message. %s", error);
+// 			callback(error);
+// 		}
+// 	});
+// }
+
 /* GET Wit.AI intent */
 function callWitAI(query, callback) {
+	var callbackStrArr = {}; // array containing multiple callback strings
 	query = encodeURIComponent(query);
 	request ({
 		uri: wit_endpoint + query,
@@ -189,11 +216,29 @@ function callWitAI(query, callback) {
 		method: 'GET'
 	}, function (error, response, body) {
 		if (!error && response.statusCode == 200) {
-			console.log("Successfully got %s", response.body);
+			console.log("Successfully got %s", JSON.stringify(JSON.parse(response.body), null, 2));
 			try {
-				body = JSON.parse(response.body);
-				intent = body.entities.intent[0].value; // [0] (first value) is the most confident value
-				callback(null, intent);
+
+				body = JSON.parse(response.body); // parse body to JSON
+				
+				if (typeof body.entities.intent !== 'undefined') {						/* INTENT */
+					callbackStrArr.intent = body.entities.intent[0].value;
+				} else {
+					callbackStrArr.intent = '-1';
+				}				
+				if (typeof body.entities.number !== 'undefined') {						/* NUMBER */
+					callbackStrArr.number = body.entities.number[0].value;	
+				} else {
+					callbackStrArr.number = '-1';
+				}
+				if (typeof body.entities.datetime !== 'undefined') {					/* DATETIME */
+					callbackStrArr.datetime = body.entities.datetime[0].value;	
+				} else {
+					callbackStrArr.datetime = '-1';
+				}
+
+				callback(null, callbackStrArr);
+
 			} catch (e) {
 				callback(e);
 			}
@@ -231,7 +276,7 @@ function receivedMessage(event) {
 			sendGenericMessage(senderID);
 			break;
 		case '/news':
-			getArticles(function(err, articles) {
+			getArticles(google_news_local, function(err, articles) {
 				sendArticle(senderID, articles[0]);
 			});
 			break;
@@ -242,8 +287,8 @@ function receivedMessage(event) {
 		// 	getNumCPY(senderID);
 		// 	break;
 		default:
-		callWitAI(messageText, function(err, intent) {
-			handleIntent(intent, senderID);
+		callWitAI(messageText, function(err, resultStrArr) {
+			handleIntent(resultStrArr, senderID);
 		});
 		break;
 		// sendTextMessage(senderID, messageText);
@@ -254,8 +299,8 @@ function receivedMessage(event) {
 }
 
 /* Wit.AI intent is handled here */
-function handleIntent(intent, sender) {
-	switch (intent) {
+function handleIntent(resultStrArr, sender) {
+	switch (resultStrArr.intent) {
 		case "joke": 
 			sendTextMessage(sender, "I'm here to work - jokes are for the weekend... :)");
 			break;
@@ -265,6 +310,16 @@ function handleIntent(intent, sender) {
 		case "identification":
 			sendTextMessage(sender, "I am a robot :| 'nuff said...");
 			break;
+		case "local news":
+			getArticles(google_news_local, function(err, articles) {
+				sendArticle(sender, articles[0]);
+			});
+			break;
+		case "general news":
+			getArticles(google_news_global, function(err, articles) {
+				sendArticle(sender, articles[0]);
+			});	
+			break;					
 		default:
 			sendTextMessage(sender, "Sorry, I don't understand - could you be more specific please?");
 	}

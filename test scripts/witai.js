@@ -1,5 +1,4 @@
 
-
 var request = require('request');
 
 var wit_token = "UW24HYCHY6YHI7RAIVF3X4NGJSNQTGHG";
@@ -17,24 +16,28 @@ function callWitAI(query, callback) {
 		if (!error && response.statusCode == 200) {
 			console.log("Successfully got %s", JSON.stringify(JSON.parse(response.body), null, 2));
 			try {
-				body = JSON.parse(response.body);
 
+				body = JSON.parse(response.body); // parse body to JSON
 				
-				callbackStrArr.intent = body.entities.intent[0].value;
-				
-				if (typeof body.entities.number !== 'undefined') {
+				if (typeof body.entities.intent !== 'undefined') {						/* INTENT */
+					callbackStrArr.intent = body.entities.intent[0].value;
+				} else {
+					callbackStrArr.intent = '-1';
+				}				
+				if (typeof body.entities.number !== 'undefined') {						/* NUMBER */
 					callbackStrArr.number = body.entities.number[0].value;	
 				} else {
 					callbackStrArr.number = '-1';
 				}
-				if (typeof body.entities.datetime[0].value !== 'undefined') {
+				if (typeof body.entities.datetime !== 'undefined') {					/* DATETIME */
 					callbackStrArr.datetime = body.entities.datetime[0].value;	
 				} else {
 					callbackStrArr.datetime = '-1';
 				}
+
 				callback(null, callbackStrArr);
+
 			} catch (e) {
-				console.log("KIRAAAAAAN");
 				callback(e);
 			}
 		} else {
@@ -45,14 +48,14 @@ function callWitAI(query, callback) {
 	});
 }
 
-callWitAI("net salaries for this month", function(err, callbackStrArr) {
+callWitAI("local news", function(err, resultStrArr) {
 
 	if (err) {
 		console.log(err);
 	} else {
-		console.log("THIS", callbackStrArr);
-		console.log(callbackStrArr.intent);
-		console.log(callbackStrArr.number);	
+		console.log(resultStrArr.intent);
+		console.log(resultStrArr.number);	
+		console.log(resultStrArr.datetime);
 	}
 
 });
