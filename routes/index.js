@@ -82,6 +82,16 @@ var dbConfig = {
 	port: 1433 //defaults to 1433
 };
 
+/* Accepts a date string in the format YYYY-MM-DD and returns the end of month value for said date */
+function eomonth(dateStr) {
+	var rslt = new Date(dateStr.substring(0,4), dateStr.substring(5,7), 1);
+	return rslt.toISOString().substring(0,10);
+}
+
+/*
+	****************************** X3 QUERY CODE BEGIN ******************************
+*/
+
 // Returns company names in a list format and replies result to sender
 function getCPY(senderID) {
 	var conn = new sql.Connection(dbConfig);
@@ -126,6 +136,33 @@ function getNumCPY(senderID) {
         console.log(err);
     });
 }  
+
+// Returns net salary for a specific month and replies result to sender
+function getNetSal(senderID, datetime) {
+
+	sendTextMessage(senderID, "SELECT SUM(AMT_0) AS NETSAL FROM SEED.HISTOPAYE WHERE RUB_0 = 'NETT_SAL' and DAT_0 = '" + eomonth(datetime) + "'");
+	var conn = new sql.Connection(dbConfig);
+
+	conn.connect().then(function () {
+	    var req = new sql.Request(conn);
+	    req.query("SELECT SUM(AMT_0) AS NETSAL_0 FROM SEED.HISTOPAYE WHERE RUB_0 = 'NETT_SAL' and DAT_0 = '" + eomonth(datetime) + "'").then(function (recordset) {
+	        console.log(recordset);
+			sendTextMessage(senderID, String(recordset[0].NETSAL));
+           // conn.close();
+        })
+        .catch(function (err) {
+            console.log(err);
+           //conn.close();
+        });        
+    })
+    .catch(function (err) {
+        console.log(err);
+    });
+} 
+
+/*
+	****************************** X3 QUERY CODE END ******************************
+*/
 
 /* GET Google news article */
 function getArticles(filter, callback) {
@@ -181,31 +218,6 @@ function sendArticle(sender, article) {
 	});  
 }
 
-/* GET Wit.AI intent original */
-// function callWitAI(query, callback) {
-// 	query = encodeURIComponent(query);
-// 	request ({
-// 		uri: wit_endpoint + query,
-// 		qs: { access_token: wit_token },
-// 		method: 'GET'
-// 	}, function (error, response, body) {
-// 		if (!error && response.statusCode == 200) {
-// 			console.log("Successfully got %s", response.body);
-// 			try {
-// 				body = JSON.parse(response.body);
-// 				intent = body.entities.intent[0].value; // [0] (first value) is the most confident value
-// 				callback(null, intent);
-// 			} catch (e) {
-// 				callback(e);
-// 			}
-// 		} else {
-// 			console.log(response.statusCode);
-// 			console.error("Unable to send message. %s", error);
-// 			callback(error);
-// 		}
-// 	});
-// }
-
 /* GET Wit.AI intent */
 function callWitAI(query, callback) {
 	var callbackStrArr = {}; // array containing multiple callback strings
@@ -221,18 +233,18 @@ function callWitAI(query, callback) {
 
 				body = JSON.parse(response.body); // parse body to JSON
 				
-				if (typeof body.entities.intent !== 'undefined') {						/* INTENT */
+				if (typeof body.entities.intent !== 'undefined') {									/* INTENT */
 					callbackStrArr.intent = body.entities.intent[0].value;
 				} else {
 					callbackStrArr.intent = '-1';
 				}				
-				if (typeof body.entities.number !== 'undefined') {						/* NUMBER */
+				if (typeof body.entities.number !== 'undefined') {									/* NUMBER */
 					callbackStrArr.number = body.entities.number[0].value;	
 				} else {
 					callbackStrArr.number = '-1';
 				}
-				if (typeof body.entities.datetime !== 'undefined') {					/* DATETIME */
-					callbackStrArr.datetime = body.entities.datetime[0].value;	
+				if (typeof body.entities.datetime !== 'undefined') {								/* DATETIME */
+					callbackStrArr.datetime = body.entities.datetime[0].value.substring(0, 10);	
 				} else {
 					callbackStrArr.datetime = '-1';
 				}
@@ -300,29 +312,36 @@ function receivedMessage(event) {
 
 /* Wit.AI intent is handled here */
 function handleIntent(resultStrArr, sender) {
-	switch (resultStrArr.intent) {
-		case "joke": 
-			sendTextMessage(sender, "I'm here to work - jokes are for the weekend... :)");
-			break;
-		case "greeting":
-			sendTextMessage(sender, "Hi!");
-			break;
-		case "identification":
-			sendTextMessage(sender, "I am a robot :| 'nuff said...");
-			break;
-		case "local news":
-			getArticles(google_news_local, function(err, articles) {
-				sendArticle(sender, articles[0]);
-			});
-			break;
-		case "general news":
-			getArticles(google_news_global, function(err, articles) {
-				sendArticle(sender, articles[0]);
-			});	
-			break;					
-		default:
-			sendTextMessage(sender, "Sorry, I don't understand - could you be more specific please?");
-	}
+	// if (resultStrArr.intent == '-1') {
+	// 	sendTextMessage(sender, "Intent returned -1, witAI needs to be updated to include the this message's intent - please contact administrator");
+	// } else {
+		switch (resultStrArr.intent) {
+			case "joke": 
+				sendTextMessage(sender, "I'm here to work - jokes are for the weekend... :)");
+				break;
+			case "greeting":
+				sendTextMessage(sender, "Hi!");
+				break;
+			case "identification":
+				sendTextMessage(sender, "I am a robot :| 'nuff said...");
+				break;
+			case "local news":
+				getArticles(google_news_local, function(err, articles) {
+					sendArticle(sender, articles[0]);
+				});
+				break;
+			case "general news":
+				getArticles(google_news_global, function(err, articles) {
+					sendArticle(sender, articles[0]);
+				});	
+				break;	
+			case "net_sal":
+				getNetSal(sender, resultStrArr.datetime);
+				break;		
+			default:
+				sendTextMessage(sender, "Sorry, I don't understand - could you be more specific please?");
+		}	
+	// }
 }
 
 /* Sample code for oculus rift template */

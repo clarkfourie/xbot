@@ -19,18 +19,18 @@ function callWitAI(query, callback) {
 
 				body = JSON.parse(response.body); // parse body to JSON
 				
-				if (typeof body.entities.intent !== 'undefined') {						/* INTENT */
+				if (typeof body.entities.intent !== 'undefined') {									/* INTENT */
 					callbackStrArr.intent = body.entities.intent[0].value;
 				} else {
 					callbackStrArr.intent = '-1';
 				}				
-				if (typeof body.entities.number !== 'undefined') {						/* NUMBER */
+				if (typeof body.entities.number !== 'undefined') {									/* NUMBER */
 					callbackStrArr.number = body.entities.number[0].value;	
 				} else {
 					callbackStrArr.number = '-1';
 				}
-				if (typeof body.entities.datetime !== 'undefined') {					/* DATETIME */
-					callbackStrArr.datetime = body.entities.datetime[0].value;	
+				if (typeof body.entities.datetime !== 'undefined') {								/* DATETIME */
+					callbackStrArr.datetime = body.entities.datetime[0].value.substring(0, 10);	
 				} else {
 					callbackStrArr.datetime = '-1';
 				}
@@ -48,7 +48,7 @@ function callWitAI(query, callback) {
 	});
 }
 
-callWitAI("local news", function(err, resultStrArr) {
+callWitAI("Net salaries for November 2015", function(err, resultStrArr) {
 
 	if (err) {
 		console.log(err);
